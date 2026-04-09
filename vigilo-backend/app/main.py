@@ -21,6 +21,7 @@ from app.db.supabase import get_supabase_client
 from app.routers.alerts import router as alerts_router
 from app.routers.analytics import router as analytics_router
 from app.routers.drives import router as drives_router
+from app.routers.exports import router as exports_router
 from app.routers.interventions import router as interventions_router
 from app.routers.notifications import router as notifications_router
 from app.routers.realtime import router as realtime_router
@@ -317,6 +318,7 @@ app.include_router(students_router, prefix="/api/v1/students")
 app.include_router(scores_router, prefix="/api/v1/scores")
 app.include_router(interventions_router, prefix="/api/v1/interventions")
 app.include_router(notifications_router, prefix="/api/v1/notifications", tags=["notifications"])
+app.include_router(exports_router, prefix="/api/v1/exports", tags=["exports"])
 app.include_router(alerts_router, prefix="/api/v1/alerts")
 app.include_router(drives_router, prefix="/api/v1/drives")
 app.include_router(analytics_router, prefix="/api/v1/analytics")
