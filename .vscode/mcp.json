@@ -18,7 +18,11 @@
     },
     "supabase": {
       "type": "http",
-      "url": "https://mcp.supabase.com/mcp"
+      "url": "https://mcp.supabase.com/mcp?project_ref=dpvoxofqnkrymhcbwbid"
+    },
+    "Sanity": {
+      "type": "http",
+      "url": "https://mcp.sanity.io"
     }
   }
 }
