@@ -181,6 +181,7 @@ def compute_score(student_id: str) -> dict[str, Any]:
                 persisted.get("placement_probability") or placement_probability
             ),
             "cluster": str(persisted.get("cluster") or cluster),
+            "computed_at": str(persisted.get("computed_at") or now.isoformat()),
             "score_breakdown": (
                 persisted.get("score_breakdown")
                 if isinstance(persisted.get("score_breakdown"), dict)

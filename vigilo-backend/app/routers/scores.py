@@ -1,10 +1,12 @@
+from datetime import datetime, timezone
+import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field, model_validator
 
 from app.auth.dependencies import CurrentUser, get_current_user, require_tpc_admin
-from app.db.supabase import get_supabase_client
+from app.db.supabase import broadcast_event, get_supabase_client
 from app.services import risk_engine
 from app.utils.response import success
 
@@ -59,16 +61,17 @@ def _profile_map(student_ids: list[str]) -> dict[str, dict[str, Any]]:
 
 @router.get("/{student_id}/history")
 def get_score_history(
-    student_id: str,
+    student_id: uuid.UUID,
     current_user: CurrentUser = Depends(get_current_user),
 ) -> dict[str, Any]:
-    _ensure_admin_or_owner(current_user, student_id)
+    student_id_str = str(student_id)
+    _ensure_admin_or_owner(current_user, student_id_str)
 
     client = get_supabase_client()
     rows = (
         client.table("vigilo_scores")
         .select("*")
-        .eq("student_id", student_id)
+        .eq("student_id", student_id_str)
         .order("computed_at", desc=True)
         .execute()
         .data
@@ -80,16 +83,17 @@ def get_score_history(
 
 @router.get("/{student_id}/latest")
 def get_latest_score(
-    student_id: str,
+    student_id: uuid.UUID,
     current_user: CurrentUser = Depends(get_current_user),
 ) -> dict[str, Any]:
-    _ensure_admin_or_owner(current_user, student_id)
+    student_id_str = str(student_id)
+    _ensure_admin_or_owner(current_user, student_id_str)
 
     client = get_supabase_client()
     rows = (
         client.table("vigilo_scores")
         .select("*")
-        .eq("student_id", student_id)
+        .eq("student_id", student_id_str)
         .eq("is_latest", True)
         .limit(1)
         .execute()
@@ -142,13 +146,40 @@ def recompute_batch_scores(
 
 @router.post("/recompute/{student_id}")
 def recompute_score_for_student(
-    student_id: str,
+    student_id: uuid.UUID,
     _: CurrentUser = Depends(require_tpc_admin),
 ) -> dict[str, Any]:
+    student_id_str = str(student_id)
+    client = get_supabase_client()
+    old_rows = (
+        client.table("vigilo_scores")
+        .select("score")
+        .eq("student_id", student_id_str)
+        .eq("is_latest", True)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+    old_score = float(old_rows[0].get("score")) if old_rows and old_rows[0].get("score") is not None else None
+
     try:
-        score_row = risk_engine.compute_score(student_id)
+        score_row = risk_engine.compute_score(student_id_str)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+    broadcast_event(
+        channel=f"scores:{student_id_str}",
+        event="score_updated",
+        payload={
+            "student_id": student_id_str,
+            "new_score": float(score_row.get("score") or 0.0),
+            "old_score": old_score,
+            "cluster": str(score_row.get("cluster") or ""),
+            "placement_probability": float(score_row.get("placement_probability") or 0.0),
+            "computed_at": str(score_row.get("computed_at") or datetime.now(timezone.utc).isoformat()),
+        },
+    )
 
     return success(score_row, "Score recomputed")
 

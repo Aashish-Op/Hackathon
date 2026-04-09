@@ -1,8 +1,9 @@
+import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.auth.dependencies import CurrentUser, get_current_user, require_student, require_tpc_admin
+from app.auth.dependencies import CurrentUser, get_current_user, require_tpc_admin
 from app.db.supabase import get_supabase_client
 from app.utils.response import success
 
@@ -11,7 +12,7 @@ router = APIRouter(tags=["students"])
 
 
 @router.get("/me")
-def get_my_student_profile(current_user: CurrentUser = Depends(require_student)) -> dict[str, Any]:
+def get_my_profile(current_user: CurrentUser = Depends(get_current_user)) -> dict[str, Any]:
     client = get_supabase_client()
 
     profile_rows = (
@@ -36,12 +37,17 @@ def get_my_student_profile(current_user: CurrentUser = Depends(require_student))
     if not profile_rows:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Student profile not found",
+            detail="Profile not found",
         )
+
+    profile = profile_rows[0]
+
+    if current_user["role"] == "tpc_admin":
+        return success(profile, "Profile fetched")
 
     return success(
         {
-            "profile": profile_rows[0],
+            "profile": profile,
             "student_profile": student_rows[0] if student_rows else None,
         },
         "Student profile fetched",
@@ -74,19 +80,21 @@ def list_students(
 
 @router.get("/{student_id}")
 def get_student_profile(
-    student_id: str,
+    student_id: uuid.UUID,
     current_user: CurrentUser = Depends(get_current_user),
 ) -> dict[str, Any]:
-    if current_user["role"] == "student" and current_user["id"] != student_id:
+    student_id_str = str(student_id)
+
+    if current_user["role"] == "student" and current_user["id"] != student_id_str:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Students can only access their own profile",
         )
 
     client = get_supabase_client()
-    profile_rows = client.table("profiles").select("*").eq("id", student_id).limit(1).execute().data or []
+    profile_rows = client.table("profiles").select("*").eq("id", student_id_str).limit(1).execute().data or []
     student_rows = (
-        client.table("student_profiles").select("*").eq("id", student_id).limit(1).execute().data or []
+        client.table("student_profiles").select("*").eq("id", student_id_str).limit(1).execute().data or []
     )
 
     if not profile_rows:

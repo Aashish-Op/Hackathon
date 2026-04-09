@@ -1,11 +1,12 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+import uuid
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 
 from app.auth.dependencies import CurrentUser, get_current_user, require_student, require_tpc_admin
-from app.db.supabase import get_supabase_client
+from app.db.supabase import broadcast_event, get_supabase_client
 from app.utils.response import success
 
 
@@ -137,17 +138,18 @@ def list_interventions(
 
 @router.get("/{student_id}")
 def list_student_interventions(
-    student_id: str,
+    student_id: uuid.UUID,
     current_user: CurrentUser = Depends(get_current_user),
 ) -> dict[str, Any]:
-    _ensure_admin_or_owner(current_user, student_id)
+    student_id_str = str(student_id)
+    _ensure_admin_or_owner(current_user, student_id_str)
 
     client = get_supabase_client()
     try:
         rows = (
             client.table("interventions")
             .select("*")
-            .eq("student_id", student_id)
+            .eq("student_id", student_id_str)
             .is_("deleted_at", "null")
             .order("created_at", desc=True)
             .execute()
@@ -160,7 +162,7 @@ def list_student_interventions(
         rows = (
             client.table("interventions")
             .select("*")
-            .eq("student_id", student_id)
+            .eq("student_id", student_id_str)
             .order("created_at", desc=True)
             .execute()
             .data
@@ -191,27 +193,72 @@ def create_intervention(
 
 @router.patch("/{intervention_id}/send")
 def send_intervention(
-    intervention_id: str,
+    intervention_id: uuid.UUID,
     _: CurrentUser = Depends(require_tpc_admin),
 ) -> dict[str, Any]:
-    _get_intervention_or_404(intervention_id)
+    intervention_id_str = str(intervention_id)
+    intervention = _get_intervention_or_404(intervention_id_str)
 
     client = get_supabase_client()
     update_payload = {
         "status": "sent",
         "sent_at": datetime.now(timezone.utc).isoformat(),
     }
-    rows = client.table("interventions").update(update_payload).eq("id", intervention_id).execute().data or []
+    rows = client.table("interventions").update(update_payload).eq("id", intervention_id_str).execute().data or []
+
+    sent_row = rows[0] if rows else intervention
+    student_id = str(sent_row.get("student_id") or intervention.get("student_id") or "")
+    if student_id:
+        message_value = (
+            sent_row.get("custom_message")
+            or sent_row.get("ai_generated_message")
+            or intervention.get("custom_message")
+            or intervention.get("ai_generated_message")
+            or ""
+        )
+        sent_at = datetime.now(timezone.utc)
+        notification_payload = {
+            "intervention_id": intervention_id_str,
+            "student_id": student_id,
+            "channel": "in_app",
+            "status": "sent",
+            "message_preview": str(message_value)[:120],
+            "sent_at": sent_at.isoformat(),
+        }
+        notification_rows = client.table("notification_log").insert(notification_payload).execute().data or []
+        if notification_rows and notification_rows[0].get("id") is not None:
+            delivered_at = sent_at + timedelta(seconds=2)
+            client.table("notification_log").update(
+                {
+                    "status": "delivered",
+                    "delivered_at": delivered_at.isoformat(),
+                }
+            ).eq("id", str(notification_rows[0]["id"])).execute()
+
+        broadcast_event(
+            channel=f"interventions:{student_id}",
+            event="nudge_received",
+            payload={
+                "intervention_id": intervention_id_str,
+                "intervention_type": str(
+                    sent_row.get("intervention_type")
+                    or intervention.get("intervention_type")
+                    or ""
+                ),
+                "message_preview": str(message_value)[:80],
+            },
+        )
 
     return success(rows[0] if rows else update_payload, "Intervention marked as sent")
 
 
 @router.patch("/{intervention_id}/acknowledge")
 def acknowledge_intervention(
-    intervention_id: str,
+    intervention_id: uuid.UUID,
     current_user: CurrentUser = Depends(require_student),
 ) -> dict[str, Any]:
-    intervention = _get_intervention_or_404(intervention_id)
+    intervention_id_str = str(intervention_id)
+    intervention = _get_intervention_or_404(intervention_id_str)
     if str(intervention.get("student_id")) != current_user["id"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -223,46 +270,48 @@ def acknowledge_intervention(
         "status": "acknowledged",
         "acknowledged_at": datetime.now(timezone.utc).isoformat(),
     }
-    rows = client.table("interventions").update(update_payload).eq("id", intervention_id).execute().data or []
+    rows = client.table("interventions").update(update_payload).eq("id", intervention_id_str).execute().data or []
 
     return success(rows[0] if rows else update_payload, "Intervention acknowledged")
 
 
 @router.patch("/{intervention_id}/complete")
 def complete_intervention(
-    intervention_id: str,
+    intervention_id: uuid.UUID,
     payload: CompleteInterventionRequest,
     _: CurrentUser = Depends(require_tpc_admin),
 ) -> dict[str, Any]:
-    _get_intervention_or_404(intervention_id)
+    intervention_id_str = str(intervention_id)
+    _get_intervention_or_404(intervention_id_str)
 
     client = get_supabase_client()
     update_payload: dict[str, Any] = {
         "status": "completed",
         "notes": payload.notes,
     }
-    rows = client.table("interventions").update(update_payload).eq("id", intervention_id).execute().data or []
+    rows = client.table("interventions").update(update_payload).eq("id", intervention_id_str).execute().data or []
 
     return success(rows[0] if rows else update_payload, "Intervention completed")
 
 
 @router.delete("/{intervention_id}")
 def soft_delete_intervention(
-    intervention_id: str,
+    intervention_id: uuid.UUID,
     _: CurrentUser = Depends(require_tpc_admin),
 ) -> dict[str, Any]:
-    _get_intervention_or_404(intervention_id)
+    intervention_id_str = str(intervention_id)
+    _get_intervention_or_404(intervention_id_str)
 
     client = get_supabase_client()
     update_payload = {"deleted_at": datetime.now(timezone.utc).isoformat()}
     try:
-        rows = client.table("interventions").update(update_payload).eq("id", intervention_id).execute().data or []
+        rows = client.table("interventions").update(update_payload).eq("id", intervention_id_str).execute().data or []
         return success(rows[0] if rows else update_payload, "Intervention soft deleted")
     except Exception as exc:
         if "deleted_at" not in str(exc):
             raise
-        rows = client.table("interventions").delete().eq("id", intervention_id).execute().data or []
+        rows = client.table("interventions").delete().eq("id", intervention_id_str).execute().data or []
         return success(
-            rows[0] if rows else {"id": intervention_id},
+            rows[0] if rows else {"id": intervention_id_str},
             "Intervention hard deleted (apply migration to enable soft delete)",
         )

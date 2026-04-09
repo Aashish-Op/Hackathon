@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 UserRole = Literal["tpc_admin", "student"]
@@ -50,3 +50,51 @@ class StudentSummary(BaseModel):
     department: str | None = None
     batch_year: int | None = None
     placement_status: PlacementStatus = "unplaced"
+
+
+SkillProficiency = Literal["beginner", "intermediate", "advanced"]
+
+
+class StudentProfileUpdate(BaseModel):
+    cgpa: float | None = None
+    active_backlogs: int | None = None
+    certifications_count: int | None = None
+
+    @field_validator("cgpa")
+    @classmethod
+    def validate_cgpa(cls, value: float | None) -> float | None:
+        if value is None:
+            return None
+        if not 0.0 <= value <= 10.0:
+            raise ValueError("cgpa must be between 0.0 and 10.0")
+        return value
+
+    @field_validator("active_backlogs")
+    @classmethod
+    def validate_active_backlogs(cls, value: int | None) -> int | None:
+        if value is None:
+            return None
+        if value < 0:
+            raise ValueError("active_backlogs must be >= 0")
+        return value
+
+    @field_validator("certifications_count")
+    @classmethod
+    def validate_certifications_count(cls, value: int | None) -> int | None:
+        if value is None:
+            return None
+        if value < 0:
+            raise ValueError("certifications_count must be >= 0")
+        return value
+
+
+class SkillCreate(BaseModel):
+    skill_name: str = Field(min_length=2, max_length=50)
+    proficiency: SkillProficiency
+
+    @field_validator("skill_name", mode="before")
+    @classmethod
+    def normalize_skill_name(cls, value: str) -> str:
+        if isinstance(value, str):
+            return value.strip()
+        return value

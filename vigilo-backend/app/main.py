@@ -1,26 +1,40 @@
+import logging
+import time
 from contextlib import asynccontextmanager
 from typing import Any, AsyncIterator
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.auth.middleware import SupabaseAuthMiddleware
 from app.config import settings
 from app.db.supabase import get_supabase_client
-from app.routers.ai import router as ai_router
 from app.routers.alerts import router as alerts_router
 from app.routers.analytics import router as analytics_router
 from app.routers.drives import router as drives_router
 from app.routers.interventions import router as interventions_router
+from app.routers.notifications import router as notifications_router
+from app.routers.realtime import router as realtime_router
 from app.routers.scores import router as scores_router
 from app.routers.students import router as students_router
 from app.services.alert_engine import run_alert_check
 from app.services.cluster_engine import run_batch_clustering
 from app.services.nudge_engine import generate_nudge
 from app.services.risk_engine import compute_score
-from app.utils.response import success
+from app.utils.response import error, success
+
+
+logger = logging.getLogger(__name__)
+limiter = Limiter(key_func=get_remote_address)
 
 
 VALID_INTERVENTION_TYPES: set[str] = {
@@ -32,6 +46,31 @@ VALID_INTERVENTION_TYPES: set[str] = {
     "weekly_check_in",
     "weekly_recommendation",
 }
+
+
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):  # type: ignore[override]
+        started_at = time.perf_counter()
+        try:
+            response = await call_next(request)
+        except Exception:
+            duration_ms = int((time.perf_counter() - started_at) * 1000)
+            logger.info("%s %s %s %sms", request.method, request.url.path, 500, duration_ms)
+            raise
+
+        duration_ms = int((time.perf_counter() - started_at) * 1000)
+        logger.info("%s %s %s %sms", request.method, request.url.path, response.status_code, duration_ms)
+        return response
+
+
+def _format_validation_errors(exc: RequestValidationError) -> list[dict[str, Any]]:
+    return [
+        {
+            "field": item.get("loc", ()),
+            "issue": item.get("msg", "Invalid value"),
+        }
+        for item in exc.errors()
+    ]
 
 
 def _normalize_intervention_type(intervention_type: str) -> tuple[str, str | None]:
@@ -210,6 +249,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.state.limiter = limiter
+app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(SupabaseAuthMiddleware)
 
 is_dev_env = settings.APP_ENV.lower() in {"dev", "development", "local", "test"}
@@ -221,13 +263,65 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.exception_handler(RequestValidationError)
+async def request_validation_exception_handler(
+    _: Request,
+    exc: RequestValidationError,
+) -> JSONResponse:
+    payload = error(message="Validation error")
+    payload.pop("data", None)
+    payload["errors"] = _format_validation_errors(exc)
+    return JSONResponse(status_code=422, content=payload)
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(_: Request, exc: HTTPException) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=error(message=str(exc.detail), data=None),
+    )
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_exceeded_handler(_: Request, __: RateLimitExceeded) -> JSONResponse:
+    return JSONResponse(
+        status_code=429,
+        content=error(
+            message="Too many requests. Please wait before trying again.",
+            data=None,
+        ),
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    logger.exception(
+        "Unhandled exception for request %s %s",
+        request.method,
+        request.url.path,
+        exc_info=exc,
+    )
+    return JSONResponse(
+        status_code=500,
+        content=error(
+            message="Internal server error. Our team has been notified.",
+            data=None,
+        ),
+    )
+
+
+from app.routers.ai import router as ai_router
+
 app.include_router(students_router, prefix="/api/v1/students")
 app.include_router(scores_router, prefix="/api/v1/scores")
 app.include_router(interventions_router, prefix="/api/v1/interventions")
+app.include_router(notifications_router, prefix="/api/v1/notifications", tags=["notifications"])
 app.include_router(alerts_router, prefix="/api/v1/alerts")
 app.include_router(drives_router, prefix="/api/v1/drives")
 app.include_router(analytics_router, prefix="/api/v1/analytics")
 app.include_router(ai_router, prefix="/api/v1/ai")
+app.include_router(realtime_router, prefix="/api/v1/realtime")
 
 
 @app.get("/health")

@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any, Literal
 
-from app.db.supabase import get_supabase_client
+from app.db.supabase import broadcast_event, get_supabase_client
 
 
 AlertType = Literal["silent_30", "score_drop", "cluster_change", "no_resume", "zero_mocks"]
@@ -60,14 +60,37 @@ def _insert_alert(
             return False
 
         client = get_supabase_client()
-        client.table("alerts").insert(
-            {
-                "student_id": student_id,
-                "alert_type": alert_type,
-                "severity": severity,
-                "message": message,
-            }
-        ).execute()
+        inserted_rows = (
+            client.table("alerts")
+            .insert(
+                {
+                    "student_id": student_id,
+                    "alert_type": alert_type,
+                    "severity": severity,
+                    "message": message,
+                }
+            )
+            .execute()
+            .data
+            or []
+        )
+
+        alert_row = inserted_rows[0] if inserted_rows else {}
+        broadcast_event(
+            channel=f"alerts:{student_id}",
+            event="new_alert",
+            payload={
+                "alert_id": alert_row.get("id"),
+                "alert_type": str(alert_row.get("alert_type") or alert_type),
+                "severity": str(alert_row.get("severity") or severity),
+                "message": str(alert_row.get("message") or message),
+                "triggered_at": str(
+                    alert_row.get("triggered_at")
+                    or datetime.now(timezone.utc).isoformat()
+                ),
+            },
+        )
+
         return True
     except Exception as exc:
         print(

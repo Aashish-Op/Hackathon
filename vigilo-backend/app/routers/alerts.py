@@ -1,11 +1,12 @@
 from datetime import datetime, timezone
+import uuid
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
 from app.auth.dependencies import CurrentUser, require_tpc_admin
-from app.db.supabase import get_supabase_client
+from app.db.supabase import broadcast_event, get_supabase_client
 from app.utils.response import success
 
 
@@ -119,21 +120,23 @@ def get_unread_unresolved_count(
 
 @router.patch("/{alert_id}/read")
 def mark_alert_read(
-    alert_id: str,
+    alert_id: uuid.UUID,
     _: CurrentUser = Depends(require_tpc_admin),
 ) -> dict[str, Any]:
+    alert_id_str = str(alert_id)
     client = get_supabase_client()
     update_payload = {"is_read": True}
-    rows = client.table("alerts").update(update_payload).eq("id", alert_id).execute().data or []
+    rows = client.table("alerts").update(update_payload).eq("id", alert_id_str).execute().data or []
 
     return success(rows[0] if rows else update_payload, "Alert marked as read")
 
 
 @router.patch("/{alert_id}/resolve")
 def resolve_alert(
-    alert_id: str,
+    alert_id: uuid.UUID,
     current_user: CurrentUser = Depends(require_tpc_admin),
 ) -> dict[str, Any]:
+    alert_id_str = str(alert_id)
     client = get_supabase_client()
     update_payload = {
         "is_resolved": True,
@@ -141,7 +144,18 @@ def resolve_alert(
         "resolved_at": datetime.now(timezone.utc).isoformat(),
         "resolved_by": current_user["id"],
     }
-    rows = client.table("alerts").update(update_payload).eq("id", alert_id).execute().data or []
+    rows = client.table("alerts").update(update_payload).eq("id", alert_id_str).execute().data or []
+
+    resolved_row = rows[0] if rows else update_payload
+    broadcast_event(
+        channel="alerts:admin",
+        event="alert_resolved",
+        payload={
+            "alert_id": alert_id_str,
+            "resolved_by": str(resolved_row.get("resolved_by") or current_user["id"]),
+            "resolved_at": str(resolved_row.get("resolved_at") or update_payload["resolved_at"]),
+        },
+    )
 
     return success(rows[0] if rows else update_payload, "Alert resolved")
 
@@ -154,5 +168,21 @@ def trigger_alert(
     client = get_supabase_client()
     insert_payload = payload.model_dump()
     rows = client.table("alerts").insert(insert_payload).execute().data or []
+
+    alert_row = rows[0] if rows else insert_payload
+    broadcast_event(
+        channel=f"alerts:{payload.student_id}",
+        event="new_alert",
+        payload={
+            "alert_id": alert_row.get("id"),
+            "alert_type": str(alert_row.get("alert_type") or payload.alert_type),
+            "severity": str(alert_row.get("severity") or payload.severity),
+            "message": str(alert_row.get("message") or payload.message),
+            "triggered_at": str(
+                alert_row.get("triggered_at")
+                or datetime.now(timezone.utc).isoformat()
+            ),
+        },
+    )
 
     return success(rows[0] if rows else insert_payload, "Alert triggered")

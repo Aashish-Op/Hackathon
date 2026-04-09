@@ -1,11 +1,14 @@
+from datetime import datetime, timedelta, timezone
 import time
+import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from app.auth.dependencies import CurrentUser, get_current_user, require_tpc_admin
 from app.db.supabase import get_supabase_client
+from app.main import limiter
 from app.services.alert_engine import run_alert_check
 from app.services.cluster_engine import run_batch_clustering
 from app.services.nudge_engine import generate_bulk_nudges, generate_nudge
@@ -222,7 +225,9 @@ def _suggest_intervention_type(skill_gaps: list[dict[str, Any]]) -> str:
 
 
 @router.post("/nudge/bulk")
+@limiter.limit("3/minute")
 def create_bulk_ai_nudges(
+    request: Request,
     payload: BulkNudgeRequest,
     current_user: CurrentUser = Depends(require_tpc_admin),
 ) -> dict[str, Any]:
@@ -232,6 +237,7 @@ def create_bulk_ai_nudges(
     )
 
     output: list[dict[str, Any]] = []
+    notification_payloads: list[dict[str, Any]] = []
     for item in generated:
         student_id = str(item["student_id"])
         message = str(item["nudge_message"])
@@ -242,6 +248,17 @@ def create_bulk_ai_nudges(
             ai_message=message,
             status_value="pending",
         )
+        sent_at = datetime.now(timezone.utc)
+        notification_payloads.append(
+            {
+                "intervention_id": intervention.get("id"),
+                "student_id": student_id,
+                "channel": "in_app",
+                "status": "sent",
+                "message_preview": message[:120],
+                "sent_at": sent_at.isoformat(),
+            }
+        )
 
         output.append(
             {
@@ -251,18 +268,34 @@ def create_bulk_ai_nudges(
             }
         )
 
+    client = get_supabase_client()
+    if notification_payloads:
+        inserted_notifications = client.table("notification_log").insert(notification_payloads).execute().data or []
+        notification_ids = [str(row["id"]) for row in inserted_notifications if row.get("id") is not None]
+        if notification_ids:
+            delivered_at = (datetime.now(timezone.utc) + timedelta(seconds=2)).isoformat()
+            client.table("notification_log").update(
+                {
+                    "status": "delivered",
+                    "delivered_at": delivered_at,
+                }
+            ).in_("id", notification_ids).execute()
+
     return success(output, "Bulk AI nudges generated")
 
 
 @router.post("/nudge/{student_id}")
+@limiter.limit("10/minute")
 def create_ai_nudge(
-    student_id: str,
+    request: Request,
+    student_id: uuid.UUID,
     payload: NudgeRequest,
     current_user: CurrentUser = Depends(require_tpc_admin),
 ) -> dict[str, Any]:
-    message = generate_nudge(student_id=student_id, intervention_type=payload.intervention_type)
+    student_id_str = str(student_id)
+    message = generate_nudge(student_id=student_id_str, intervention_type=payload.intervention_type)
     intervention = _safe_intervention_insert(
-        student_id=student_id,
+        student_id=student_id_str,
         created_by=current_user["id"],
         intervention_type=payload.intervention_type,
         ai_message=message,
@@ -272,7 +305,7 @@ def create_ai_nudge(
     return success(
         {
             "intervention_id": intervention.get("id"),
-            "student_id": student_id,
+            "student_id": student_id_str,
             "message": message,
             "intervention_type": payload.intervention_type,
         },
@@ -281,7 +314,9 @@ def create_ai_nudge(
 
 
 @router.post("/score/recompute-all")
+@limiter.limit("2/minute")
 def recompute_all_scores(
+    request: Request,
     _: CurrentUser = Depends(require_tpc_admin),
 ) -> dict[str, Any]:
     started_at = time.perf_counter()
@@ -327,15 +362,18 @@ def manual_alert_check(
 
 
 @router.get("/student/{student_id}/recommendation")
+@limiter.limit("20/minute")
 def get_student_recommendation(
-    student_id: str,
+    request: Request,
+    student_id: uuid.UUID,
     current_user: CurrentUser = Depends(get_current_user),
 ) -> dict[str, Any]:
-    _ensure_admin_or_owner(current_user, student_id)
+    student_id_str = str(student_id)
+    _ensure_admin_or_owner(current_user, student_id_str)
 
-    skill_gaps = _get_skill_gaps(student_id)
+    skill_gaps = _get_skill_gaps(student_id_str)
     suggested_action = _suggest_intervention_type(skill_gaps)
-    message = generate_nudge(student_id=student_id, intervention_type="weekly_recommendation")
+    message = generate_nudge(student_id=student_id_str, intervention_type="weekly_recommendation")
 
     return success(
         {
