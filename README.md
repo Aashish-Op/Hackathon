@@ -1,56 +1,90 @@
-# Next.js Full-Stack Starter
+# Vigilo Dashboard Workspace
 
-A well-structured Next.js app using the App Router, TypeScript, Tailwind CSS, and a clean separation between frontend feature code and backend services.
+This workspace contains a Next.js dashboard frontend and a FastAPI backend for live placement-risk monitoring.
 
-## Tech stack
+## Stack
 
 - Next.js 16 (App Router)
 - TypeScript
-- Tailwind CSS
-- ESLint
+- Tailwind CSS v4
+- FastAPI (Python backend in `vigilo-backend`)
+- Supabase data store
 
-## Project structure
+## Active frontend structure
 
 ```text
-src/
-	app/
-		api/
-			health/route.ts        # Backend API route
-		layout.tsx
-		page.tsx                 # Frontend entry page
-	features/
-		health/
-			components/
-				health-panel.tsx     # Frontend UI + state
-	lib/
-		client/
-			api-client.ts          # Frontend API calls
-		server/
-			services/
-				health-service.ts    # Backend business logic
-		types/
-			health.ts              # Shared API types
+app/
+  dashboard/
+    page.tsx
+    analytics/page.tsx
+    segmentation/page.tsx
+    students/page.tsx
+    risk-alerts/page.tsx
+    interventions/page.tsx
+    nudges/page.tsx
+    settings/page.tsx
+    help/page.tsx
+  api/
+    dashboard/live/route.ts   # Aggregates live backend data for dashboard pages
+  globals.css
+  layout.tsx
+  page.tsx
+
+components/
+  dashboard/
+  ui/
+  tpc-layout.tsx
+
+lib/
+  constants.ts
+  dashboard/
+    dashboard-view.ts
+    use-live-dashboard-data.ts
+  server/
+    backend-client.ts
+
+vigilo-backend/
+  app/
+    routers/
+    auth/
+    services/
 ```
 
-## Run locally
+## Live data flow
+
+1. Dashboard pages call `useLiveDashboardData`.
+2. The hook fetches `GET /api/dashboard/live`.
+3. The route aggregates backend endpoints under `vigilo-backend` (`/api/v1/analytics`, `/students`, `/alerts`, `/interventions`, `/notifications`).
+4. UI receives mapped, chart-ready datasets with fallback constants if backend is unavailable.
+
+## Local run
+
+Frontend:
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open http://localhost:3000.
+Backend:
+
+```bash
+cd vigilo-backend
+uvicorn app.main:app --reload
+```
+
+Optional environment variable for frontend backend target:
+
+- `VIGILO_BACKEND_URL` (default: `http://127.0.0.1:8000`)
 
 ## Scripts
 
-- `npm run dev` - Start local development server
-- `npm run build` - Build for production
-- `npm run start` - Run production build
+- `npm run dev` - Start frontend dev server
+- `npm run build` - Build frontend for production
+- `npm run start` - Run production frontend
 - `npm run lint` - Run ESLint
 
-## Extend this starter
+## Notes on legacy folders
 
-- Add new domain features under `src/features/<feature-name>`
-- Add backend services in `src/lib/server/services`
-- Keep API route handlers thin and delegate logic to services
-- Add shared response/request types to `src/lib/types`
+- `src/` and `legacy-src/` exist from earlier iterations and merges.
+- The active runtime and TypeScript include paths are rooted at `app/`, `components/`, and `lib/`.

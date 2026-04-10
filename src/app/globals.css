@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+:root {
+	--paper: #f5f0e8;
+	--ink: #1a1a1a;
+	--red: #c0392b;
+	--muted: #5a5550;
+	--tint: #ede8de;
+}
+
+* {
+	border-color: rgba(26, 26, 26, 0.15);
+	box-sizing: border-box;
+}
+
+::selection {
+	background: rgba(192, 57, 43, 0.18);
+	color: var(--ink);
+}
+
+html {
+	scroll-behavior: smooth;
+}
+
+body {
+	background: var(--paper);
+	color: var(--ink);
+}
+
+a {
+	color: inherit;
+	text-decoration: none;
+}
+
+@keyframes dot-pulse {
+	0%,
+	100% {
+		opacity: 0.4;
+	}
+	50% {
+		opacity: 1;
+	}
+}
+
+@keyframes cursor-blink {
+	0%,
+	49% {
+		opacity: 1;
+	}
+	50%,
+	100% {
+		opacity: 0;
+	}
+}
+
+.nav-dot {
+	animation: dot-pulse 1s ease-in-out infinite alternate;
+}
+
+.reveal {
+	opacity: 0;
+	transform: translateY(16px);
+	transition:
+		opacity 0.4s ease-out,
+		transform 0.4s ease-out;
+}
+
+.reveal.is-visible {
+	opacity: 1;
+	transform: translateY(0);
+}
+
+.cursor-blink {
+	animation: cursor-blink 0.8s step-end infinite;
+}
+
+.vigilo-slider::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	height: 12px;
+	width: 12px;
+	border-radius: 6px;
+	border: 1px solid var(--ink);
+	background: var(--paper);
+	cursor: pointer;
+}
+
+.vigilo-slider::-moz-range-thumb {
+	height: 12px;
+	width: 12px;
+	border-radius: 6px;
+	border: 1px solid var(--ink);
+	background: var(--paper);
+	cursor: pointer;
+}
+
+.vigilo-slider:focus {
+	outline: none;
+}

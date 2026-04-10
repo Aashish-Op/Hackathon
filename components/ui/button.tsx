@@ -15,17 +15,17 @@ type ButtonSize = "default" | "sm" | "lg" | "icon";
 
 const variantClasses: Record<ButtonVariant, string> = {
   default:
-    "bg-violet-600 text-white hover:bg-violet-700 focus-visible:ring-violet-500",
+    "bg-red-700 text-white hover:bg-red-800 focus-visible:ring-red-600",
   ghost:
-    "bg-transparent text-foreground hover:bg-muted focus-visible:ring-violet-500",
+    "bg-transparent text-foreground hover:bg-muted focus-visible:ring-red-600",
   outline:
-    "border border-border bg-card text-card-foreground hover:bg-muted focus-visible:ring-violet-500",
+    "border border-border bg-card text-card-foreground hover:bg-muted focus-visible:ring-red-600",
   secondary:
-    "bg-muted text-foreground hover:bg-muted/80 focus-visible:ring-violet-500",
+    "bg-muted text-foreground hover:bg-muted/80 focus-visible:ring-red-600",
   warning:
-    "border border-amber-500/30 bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 focus-visible:ring-violet-500",
+    "border border-amber-300 bg-amber-100 text-amber-700 hover:bg-amber-200 focus-visible:ring-red-600",
   danger:
-    "border border-rose-500/30 bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 focus-visible:ring-violet-500",
+    "border border-rose-300 bg-rose-100 text-rose-700 hover:bg-rose-200 focus-visible:ring-red-600",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {

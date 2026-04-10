@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     LLM_TIMEOUT_SECONDS: float = 30.0
 
     APP_ENV: str = "development"
+    ALLOW_DEV_AUTH_BYPASS: bool = True
+    ALLOW_ORIGINS: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",

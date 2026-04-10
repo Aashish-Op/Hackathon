@@ -96,7 +96,7 @@ export default function SettingsPage() {
                   >
                     <input
                       checked={frequency === option}
-                      className="accent-violet-500"
+                      className="accent-red-700"
                       name="clustering-frequency"
                       onChange={() => setFrequency(option)}
                       type="radio"
@@ -154,7 +154,7 @@ export default function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Integrations</CardTitle>
-          <CardDescription>Connected systems feeding the PlaceGuard intelligence layer.</CardDescription>
+          <CardDescription>Connected systems feeding the Vigilo intelligence layer.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 lg:grid-cols-2">
           {INTEGRATIONS.map((integration) => (
@@ -164,7 +164,7 @@ export default function SettingsPage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="rounded-2xl border border-border bg-card p-3 text-violet-300">
+                  <div className="rounded-2xl border border-border bg-card p-3 text-red-700">
                     <AppIcon className="h-5 w-5" name={integration.icon} />
                   </div>
                   <div>

@@ -125,12 +125,77 @@ def list_interventions(
             fallback_query = fallback_query.lte("created_at", to_date.isoformat())
         rows = fallback_query.order("created_at", desc=True).range(start, end).execute().data or []
 
+    student_ids = list({str(row["student_id"]) for row in rows if row.get("student_id") is not None})
+    actor_ids = list({str(row["created_by"]) for row in rows if row.get("created_by") is not None})
+    profile_ids = list({*student_ids, *actor_ids})
+
+    profile_map: dict[str, dict[str, Any]] = {}
+    score_map: dict[str, dict[str, Any]] = {}
+
+    if profile_ids:
+        profile_rows = (
+            client.table("profiles")
+            .select("id, full_name, department")
+            .in_("id", profile_ids)
+            .execute()
+            .data
+            or []
+        )
+        profile_map = {
+            str(row["id"]): row
+            for row in profile_rows
+            if row.get("id") is not None
+        }
+
+    if student_ids:
+        score_rows = (
+            client.table("vigilo_scores")
+            .select("student_id, score, cluster, placement_probability")
+            .eq("is_latest", True)
+            .in_("student_id", student_ids)
+            .execute()
+            .data
+            or []
+        )
+        score_map = {
+            str(row["student_id"]): row
+            for row in score_rows
+            if row.get("student_id") is not None
+        }
+
+    enriched_items: list[dict[str, Any]] = []
+    for row in rows:
+        student_id = str(row.get("student_id") or "")
+        created_by = str(row.get("created_by") or "")
+        student_profile = profile_map.get(student_id, {})
+        actor_profile = profile_map.get(created_by, {})
+        score_row = score_map.get(student_id)
+
+        enriched_items.append(
+            {
+                **row,
+                "student_name": student_profile.get("full_name"),
+                "student_department": student_profile.get("department"),
+                "assigned_officer_name": actor_profile.get("full_name"),
+                "student_risk_score": float(score_row.get("score") or 0.0)
+                if score_row is not None
+                else None,
+                "student_cluster": str(score_row.get("cluster")) if score_row else None,
+                "student_placement_probability": round(
+                    float(score_row.get("placement_probability") or 0.0) * 100.0,
+                    2,
+                )
+                if score_row is not None
+                else None,
+            }
+        )
+
     return success(
         {
             "page": page,
             "limit": limit,
-            "count": len(rows),
-            "items": rows,
+            "count": len(enriched_items),
+            "items": enriched_items,
         },
         "Interventions fetched",
     )
@@ -292,6 +357,42 @@ def complete_intervention(
     rows = client.table("interventions").update(update_payload).eq("id", intervention_id_str).execute().data or []
 
     return success(rows[0] if rows else update_payload, "Intervention completed")
+
+
+@router.delete("/{intervention_id}")
+def delete_intervention(
+    intervention_id: uuid.UUID,
+    _: CurrentUser = Depends(require_tpc_admin),
+) -> dict[str, Any]:
+    intervention_id_str = str(intervention_id)
+    _get_intervention_or_404(intervention_id_str)
+
+    client = get_supabase_client()
+    deleted_payload = {"deleted_at": datetime.now(timezone.utc).isoformat()}
+
+    try:
+        rows = (
+            client.table("interventions")
+            .update(deleted_payload)
+            .eq("id", intervention_id_str)
+            .execute()
+            .data
+            or []
+        )
+        return success(rows[0] if rows else deleted_payload, "Intervention deleted")
+    except Exception as exc:
+        if "deleted_at" not in str(exc):
+            raise
+
+        rows = (
+            client.table("interventions")
+            .delete()
+            .eq("id", intervention_id_str)
+            .execute()
+            .data
+            or []
+        )
+        return success(rows[0] if rows else {"id": intervention_id_str}, "Intervention deleted")
 
 
 @router.delete("/{intervention_id}")

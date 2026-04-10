@@ -51,24 +51,62 @@ def list_alerts(
     rows = query.order("triggered_at", desc=True).range(start, end).execute().data or []
 
     student_ids = list({str(row["student_id"]) for row in rows if row.get("student_id") is not None})
-    student_name_map: dict[str, str | None] = {}
+    student_meta_map: dict[str, dict[str, Any]] = {}
+    score_map: dict[str, dict[str, Any]] = {}
 
     if student_ids:
         profile_rows = (
             client.table("profiles")
-            .select("id, full_name")
+            .select("id, full_name, department")
             .in_("id", student_ids)
             .execute()
             .data
             or []
         )
-        student_name_map = {str(row["id"]): row.get("full_name") for row in profile_rows}
+        student_meta_map = {
+            str(row["id"]): {
+                "student_name": row.get("full_name"),
+                "student_department": row.get("department"),
+            }
+            for row in profile_rows
+            if row.get("id") is not None
+        }
+
+        score_rows = (
+            client.table("vigilo_scores")
+            .select("student_id, score, cluster, placement_probability")
+            .eq("is_latest", True)
+            .in_("student_id", student_ids)
+            .execute()
+            .data
+            or []
+        )
+        score_map = {
+            str(row["student_id"]): row
+            for row in score_rows
+            if row.get("student_id") is not None
+        }
 
     items: list[dict[str, Any]] = []
     for row in rows:
+        student_id = str(row.get("student_id") or "")
+        student_meta = student_meta_map.get(student_id, {})
+        score_row = score_map.get(student_id)
+
         resolved_row = {
             **row,
-            "student_name": student_name_map.get(str(row.get("student_id"))),
+            "student_name": student_meta.get("student_name"),
+            "student_department": student_meta.get("student_department"),
+            "student_risk_score": float(score_row.get("score") or 0.0)
+            if score_row is not None
+            else None,
+            "student_cluster": str(score_row.get("cluster")) if score_row else None,
+            "student_placement_probability": round(
+                float(score_row.get("placement_probability") or 0.0) * 100.0,
+                2,
+            )
+            if score_row is not None
+            else None,
         }
         items.append(resolved_row)
 

@@ -255,11 +255,19 @@ app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(SupabaseAuthMiddleware)
 
+
+def _parse_allow_origins(raw: str) -> list[str]:
+    return [origin.strip() for origin in raw.split(",") if origin.strip()]
+
+
 is_dev_env = settings.APP_ENV.lower() in {"dev", "development", "local", "test"}
+configured_origins = _parse_allow_origins(settings.ALLOW_ORIGINS)
+allowed_origins = ["*"] if is_dev_env else configured_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if is_dev_env else [],
-    allow_credentials=is_dev_env,
+    allow_origins=allowed_origins,
+    allow_credentials=is_dev_env or (len(allowed_origins) > 0 and "*" not in allowed_origins),
     allow_methods=["*"],
     allow_headers=["*"],
 )

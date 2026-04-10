@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { DM_Serif_Display, Geist, Geist_Mono } from "next/font/google";
 
 import "./globals.css";
-import { AppToaster } from "@/components/ui/sonner";
 import { ToasterProvider } from "@/components/ui/toast";
 
 const geistSans = Geist({
@@ -17,10 +16,17 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
+const dmSerifDisplay = DM_Serif_Display({
+  variable: "--font-dm-serif-display",
+  subsets: ["latin"],
+  weight: "400",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "PlaceGuard AI",
+  title: "Vigilo - Placement Intelligence Platform",
   description:
-    "AI-powered placement intelligence for training and placement cells and their students.",
+    "Early warning intelligence for training and placement cells to detect risk, intervene earlier, and improve placement outcomes.",
 };
 
 export default function RootLayout({
@@ -31,14 +37,11 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`dark ${geistSans.variable} ${geistMono.variable}`}
+      className={`${geistSans.variable} ${geistMono.variable} ${dmSerifDisplay.variable}`}
       suppressHydrationWarning
     >
       <body className="min-h-screen bg-background text-foreground">
-        <ToasterProvider>
-          {children}
-          <AppToaster />
-        </ToasterProvider>
+        <ToasterProvider>{children}</ToasterProvider>
       </body>
     </html>
   );

@@ -79,14 +79,12 @@ const iconMap = {
 
 const toneClassMap: Record<BadgeTone, string> = {
   default: "text-foreground",
-  violet: "text-violet-400",
-  emerald: "text-emerald-400",
-  amber: "text-amber-400",
-  rose: "text-rose-400",
-  slate: "text-slate-400",
-  blue: "text-sky-400",
-  sky: "text-sky-400",
-  yellow: "text-yellow-400",
+  violet: "text-red-700",
+  emerald: "text-emerald-700",
+  amber: "text-amber-700",
+  rose: "text-rose-700",
+  slate: "text-slate-700",
+  blue: "text-sky-700",
 };
 
 const sparklineToneMap: Record<BadgeTone, string> = {
@@ -97,8 +95,6 @@ const sparklineToneMap: Record<BadgeTone, string> = {
   rose: "var(--chart-rose)",
   slate: "var(--chart-slate)",
   blue: "var(--chart-blue)",
-  sky: "var(--chart-sky)",
-  yellow: "var(--chart-yellow)",
 };
 
 export function AppIcon({
@@ -309,7 +305,7 @@ function tooltipDotClass(key?: string | number) {
     return "bg-slate-400";
   }
 
-  return "bg-violet-400";
+  return "bg-red-500";
 }
 
 export function ChartTooltipCard({
@@ -366,7 +362,7 @@ export function SelectField({
     <select
       aria-label={ariaLabel}
       className={cn(
-        "h-10 rounded-xl border border-border bg-muted px-3 text-sm text-foreground transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "h-10 rounded-xl border border-border bg-muted px-3 text-sm text-foreground transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         className,
       )}
       onChange={(event) => onChange(event.target.value)}

@@ -16,6 +16,45 @@ class CurrentUser(TypedDict):
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
+def _is_dev_bypass_enabled() -> bool:
+    return settings.ALLOW_DEV_AUTH_BYPASS and settings.APP_ENV.lower() in {
+        "dev",
+        "development",
+        "local",
+        "test",
+    }
+
+
+def _resolve_dev_user() -> CurrentUser | None:
+    client = get_supabase_client()
+
+    admin_rows = (
+        client.table("profiles")
+        .select("id")
+        .eq("role", "tpc_admin")
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+    if admin_rows:
+        return {"id": str(admin_rows[0]["id"]), "role": "tpc_admin"}
+
+    student_rows = (
+        client.table("profiles")
+        .select("id")
+        .eq("role", "student")
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+    if student_rows:
+        return {"id": str(student_rows[0]["id"]), "role": "student"}
+
+    return None
+
+
 def _decode_supabase_jwt(token: str) -> dict[str, Any]:
     try:
         payload = jwt.decode(
@@ -65,12 +104,24 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ) -> CurrentUser:
     if credentials is None or credentials.scheme.lower() != "bearer":
+        if _is_dev_bypass_enabled():
+            dev_user = _resolve_dev_user()
+            if dev_user is not None:
+                return dev_user
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Bearer token is required",
         )
 
-    payload = _decode_supabase_jwt(credentials.credentials)
+    try:
+        payload = _decode_supabase_jwt(credentials.credentials)
+    except HTTPException:
+        if _is_dev_bypass_enabled():
+            dev_user = _resolve_dev_user()
+            if dev_user is not None:
+                return dev_user
+        raise
+
     user_id = str(payload["sub"])
     role = _resolve_role(user_id)
 
