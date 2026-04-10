@@ -8,7 +8,6 @@ import {
   CartesianGrid,
   Line,
   LineChart,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -27,6 +26,7 @@ import { ChartTooltipCard, RiskScoreBadge, StatCard } from "@/components/dashboa
 import { AppIcon } from "@/components/dashboard/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartContainer } from "@/components/ui/chart-container";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function AnalyticsPage() {
@@ -52,7 +52,7 @@ export default function AnalyticsPage() {
             <CardDescription>Moving readiness by cohort over the last twelve weeks.</CardDescription>
           </CardHeader>
           <CardContent className="h-[340px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartContainer>
               <AreaChart data={ANALYTICS_AREA_TREND}>
                 <defs>
                   <linearGradient id="analytics-ready" x1="0" x2="0" y1="0" y2="1">
@@ -76,7 +76,7 @@ export default function AnalyticsPage() {
                 <Area dataKey="atRisk" fill="url(#analytics-atrisk)" name="At-Risk" stroke="var(--chart-amber)" strokeWidth={2.5} type="monotone" />
                 <Area dataKey="unprepared" fill="url(#analytics-unprepared)" name="Unprepared" stroke="var(--chart-rose)" strokeWidth={2.5} type="monotone" />
               </AreaChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
 
@@ -86,7 +86,7 @@ export default function AnalyticsPage() {
             <CardDescription>Grouped view of critical, high, and medium alerts.</CardDescription>
           </CardHeader>
           <CardContent className="h-[340px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartContainer>
               <BarChart data={ANALYTICS_DEPARTMENT_RISK}>
                 <CartesianGrid stroke="var(--border)" strokeDasharray="4 4" vertical={false} />
                 <XAxis dataKey="department" stroke="var(--muted-foreground)" tickLine={false} axisLine={false} />
@@ -96,7 +96,7 @@ export default function AnalyticsPage() {
                 <Bar dataKey="high" fill="var(--chart-amber)" name="High" radius={[8, 8, 0, 0]} />
                 <Bar dataKey="medium" fill="var(--chart-blue)" name="Medium" radius={[8, 8, 0, 0]} />
               </BarChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
 
@@ -108,7 +108,7 @@ export default function AnalyticsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="h-[340px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartContainer>
               <LineChart data={ANALYTICS_EFFECTIVENESS}>
                 <CartesianGrid stroke="var(--border)" strokeDasharray="4 4" vertical={false} />
                 <XAxis dataKey="week" stroke="var(--muted-foreground)" tickLine={false} axisLine={false} />
@@ -117,7 +117,7 @@ export default function AnalyticsPage() {
                 <Line dataKey="intervention" dot={{ r: 3 }} name="Intervention" stroke="var(--chart-violet)" strokeWidth={3} type="monotone" />
                 <Line dataKey="control" dot={{ r: 3 }} name="Control" stroke="var(--chart-amber)" strokeWidth={2.5} type="monotone" />
               </LineChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
 
@@ -127,7 +127,7 @@ export default function AnalyticsPage() {
             <CardDescription>Most common blockers delaying readiness.</CardDescription>
           </CardHeader>
           <CardContent className="h-[340px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartContainer>
               <BarChart data={ANALYTICS_SKILL_GAPS} layout="vertical" margin={{ left: 24 }}>
                 <CartesianGrid stroke="var(--border)" strokeDasharray="4 4" horizontal={false} />
                 <XAxis stroke="var(--muted-foreground)" tickLine={false} axisLine={false} type="number" />
@@ -135,7 +135,7 @@ export default function AnalyticsPage() {
                 <Tooltip content={<ChartTooltipCard formatter={(value) => `${value}%`} />} />
                 <Bar dataKey="value" fill="var(--chart-violet)" name="Gap" radius={[0, 8, 8, 0]} />
               </BarChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
       </section>

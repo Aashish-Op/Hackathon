@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-type ProgressTone = "emerald" | "amber" | "rose" | "slate" | "violet";
+type ProgressTone = "emerald" | "amber" | "rose" | "slate" | "violet" | "sky" | "yellow";
 
 export function Progress({
   value,
