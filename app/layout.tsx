@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import "./globals.css";
+import { AppToaster } from "@/components/ui/sonner";
 import { ToasterProvider } from "@/components/ui/toast";
 
 const geistSans = Geist({
@@ -17,9 +18,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PlaceGuard AI | TPC Admin Dashboard",
+  title: "PlaceGuard AI",
   description:
-    "Early warning intelligence for training and placement cells to detect risk, intervene earlier, and improve placement outcomes.",
+    "AI-powered placement intelligence for training and placement cells and their students.",
 };
 
 export default function RootLayout({
@@ -34,7 +35,10 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-screen bg-background text-foreground">
-        <ToasterProvider>{children}</ToasterProvider>
+        <ToasterProvider>
+          {children}
+          <AppToaster />
+        </ToasterProvider>
       </body>
     </html>
   );

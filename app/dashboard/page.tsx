@@ -10,7 +10,6 @@ import {
   LineChart,
   Pie,
   PieChart,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -36,6 +35,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartContainer } from "@/components/ui/chart-container";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -78,7 +78,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="h-[320px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ChartContainer>
                 <BarChart data={DASHBOARD_RISK_DISTRIBUTION}>
                   <defs>
                     <linearGradient id="risk-ready" x1="0" x2="0" y1="0" y2="1">
@@ -102,7 +102,7 @@ export default function DashboardPage() {
                   <Bar dataKey="atRisk" fill="url(#risk-amber)" name="At-Risk" radius={[8, 8, 0, 0]} stackId="risk" />
                   <Bar dataKey="unprepared" fill="url(#risk-rose)" name="Unprepared" radius={[8, 8, 0, 0]} stackId="risk" />
                 </BarChart>
-              </ResponsiveContainer>
+              </ChartContainer>
             </div>
             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-2">
@@ -129,7 +129,7 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="h-[360px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartContainer>
               <LineChart data={DASHBOARD_PROBABILITY_TREND}>
                 <defs>
                   <linearGradient id="probability-area" x1="0" x2="0" y1="0" y2="1">
@@ -148,7 +148,7 @@ export default function DashboardPage() {
                 <Line dataKey="ready" dot={{ r: 3 }} name="Ready Cohort" stroke="var(--chart-emerald)" strokeWidth={2.5} type="monotone" />
                 <Line dataKey="atRisk" dot={{ r: 3 }} name="At-Risk Cohort" stroke="var(--chart-amber)" strokeWidth={2.5} type="monotone" />
               </LineChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
       </section>
@@ -166,7 +166,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="grid gap-8 xl:grid-cols-[1.2fr_1fr]">
             <div className="relative mx-auto h-[320px] w-full max-w-[360px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ChartContainer>
                 <PieChart>
                   <Pie
                     data={DASHBOARD_SEGMENTS}
@@ -183,7 +183,7 @@ export default function DashboardPage() {
                   </Pie>
                   <Tooltip content={<ChartTooltipCard formatter={(value) => formatCompactNumber(Number(value))} />} />
                 </PieChart>
-              </ResponsiveContainer>
+              </ChartContainer>
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                 <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Total Students</p>
                 <p className="mt-2 text-4xl font-semibold text-foreground">1,247</p>

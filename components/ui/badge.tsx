@@ -9,7 +9,9 @@ type BadgeTone =
   | "amber"
   | "rose"
   | "slate"
-  | "blue";
+  | "blue"
+  | "sky"
+  | "yellow";
 
 const toneClasses: Record<BadgeTone, string> = {
   default: "border-border bg-muted text-muted-foreground",
@@ -19,6 +21,8 @@ const toneClasses: Record<BadgeTone, string> = {
   rose: "border-rose-500/20 bg-rose-500/10 text-rose-400",
   slate: "border-slate-500/20 bg-slate-500/10 text-slate-400",
   blue: "border-sky-500/20 bg-sky-500/10 text-sky-400",
+  sky: "border-sky-500/20 bg-sky-500/10 text-sky-400",
+  yellow: "border-yellow-500/20 bg-yellow-500/10 text-yellow-400",
 };
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {

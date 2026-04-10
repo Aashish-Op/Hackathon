@@ -9,7 +9,6 @@ import {
   PolarRadiusAxis,
   Radar,
   RadarChart,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -25,6 +24,7 @@ import { AppIcon, ChartTooltipCard, SparkleCue } from "@/components/dashboard/sh
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartContainer } from "@/components/ui/chart-container";
 
 const toneClassMap = {
   emerald: "text-emerald-400 border-emerald-500/20 bg-emerald-500/10",
@@ -63,7 +63,7 @@ export default function SegmentationPage() {
             <CardContent className="space-y-5">
               <p className="text-sm text-muted-foreground">{cluster.traits}</p>
               <div className="h-44 rounded-2xl border border-border bg-muted/30 p-3">
-                <ResponsiveContainer width="100%" height="100%">
+                <ChartContainer>
                   <BarChart data={cluster.departments}>
                     <CartesianGrid stroke="var(--border)" strokeDasharray="4 4" vertical={false} />
                     <XAxis dataKey="department" stroke="var(--muted-foreground)" tickLine={false} axisLine={false} />
@@ -71,7 +71,7 @@ export default function SegmentationPage() {
                     <Tooltip content={<ChartTooltipCard />} />
                     <Bar dataKey="value" fill={`var(--chart-${cluster.tone})`} radius={[8, 8, 0, 0]} />
                   </BarChart>
-                </ResponsiveContainer>
+                </ChartContainer>
               </div>
               <div className="flex flex-wrap gap-2">
                 {cluster.actions.map((action) => (
@@ -118,7 +118,7 @@ export default function SegmentationPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="h-[420px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartContainer>
               <RadarChart data={SEGMENTATION_RADAR_DATA}>
                 <PolarGrid stroke="var(--border)" />
                 <PolarAngleAxis dataKey="skill" stroke="var(--muted-foreground)" />
@@ -149,7 +149,7 @@ export default function SegmentationPage() {
                   strokeWidth={2}
                 />
               </RadarChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </div>
           <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-2">

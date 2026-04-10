@@ -85,6 +85,8 @@ const toneClassMap: Record<BadgeTone, string> = {
   rose: "text-rose-400",
   slate: "text-slate-400",
   blue: "text-sky-400",
+  sky: "text-sky-400",
+  yellow: "text-yellow-400",
 };
 
 const sparklineToneMap: Record<BadgeTone, string> = {
@@ -95,6 +97,8 @@ const sparklineToneMap: Record<BadgeTone, string> = {
   rose: "var(--chart-rose)",
   slate: "var(--chart-slate)",
   blue: "var(--chart-blue)",
+  sky: "var(--chart-sky)",
+  yellow: "var(--chart-yellow)",
 };
 
 export function AppIcon({

@@ -1,0 +1,103 @@
+import {
+  AlertTriangle,
+  BadgeCheck,
+  Bell,
+  BookOpen,
+  Brain,
+  Calendar,
+  CheckCircle2,
+  ChefHat,
+  ChevronRight,
+  Clock,
+  Code,
+  Code2,
+  Cpu,
+  Download,
+  Eye,
+  FileCheck,
+  FileText,
+  Flame,
+  FolderGit2,
+  FolderOpen,
+  Gauge,
+  Globe,
+  LayoutDashboard,
+  Lock,
+  Menu,
+  MessageSquare,
+  Mic,
+  Network,
+  Search,
+  Settings,
+  ShieldAlert,
+  Sparkles,
+  Terminal,
+  Trophy,
+  TrendingUp,
+  UserCheck,
+  UserCircle,
+  Users,
+  X,
+  Zap,
+} from "lucide-react";
+
+import { cn } from "@/lib/utils";
+
+const iconMap = {
+  AlertTriangle,
+  BadgeCheck,
+  Bell,
+  BookOpen,
+  Brain,
+  Calendar,
+  CheckCircle2,
+  ChefHat,
+  ChevronRight,
+  Clock,
+  Code,
+  Code2,
+  Cpu,
+  Download,
+  Eye,
+  FileCheck,
+  FileText,
+  Flame,
+  FolderGit2,
+  FolderOpen,
+  Gauge,
+  Globe,
+  Github: FolderGit2,
+  LayoutDashboard,
+  Linkedin: Network,
+  Lock,
+  Menu,
+  MessageSquare,
+  Mic,
+  Network,
+  Search,
+  Settings,
+  ShieldAlert,
+  Sparkles,
+  Terminal,
+  Trophy,
+  TrendingUp,
+  UserCheck,
+  UserCircle,
+  Users,
+  X,
+  Zap,
+};
+
+export type StudentIconName = keyof typeof iconMap;
+
+export function StudentIcon({
+  name,
+  className,
+}: {
+  name: StudentIconName;
+  className?: string;
+}) {
+  const Icon = iconMap[name];
+
+  return <Icon className={cn("h-4 w-4", className)} />;
+}

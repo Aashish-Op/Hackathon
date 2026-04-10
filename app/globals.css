@@ -27,6 +27,8 @@
   --chart-rose: oklch(0.69 0.21 18);
   --chart-slate: oklch(0.62 0.024 255);
   --chart-blue: oklch(0.69 0.16 244);
+  --chart-sky: oklch(0.76 0.12 235);
+  --chart-yellow: oklch(0.84 0.14 92);
 }
 
 @theme inline {
@@ -55,6 +57,8 @@
   --color-chart-rose: var(--chart-rose);
   --color-chart-slate: var(--chart-slate);
   --color-chart-blue: var(--chart-blue);
+  --color-chart-sky: var(--chart-sky);
+  --color-chart-yellow: var(--chart-yellow);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --radius-sm: calc(var(--radius) - 0.25rem);
@@ -150,6 +154,16 @@
   .progress-bar[data-tone="violet"]::-webkit-progress-value,
   .progress-bar[data-tone="violet"]::-moz-progress-bar {
     background: var(--chart-violet);
+  }
+
+  .progress-bar[data-tone="sky"]::-webkit-progress-value,
+  .progress-bar[data-tone="sky"]::-moz-progress-bar {
+    background: var(--chart-sky);
+  }
+
+  .progress-bar[data-tone="yellow"]::-webkit-progress-value,
+  .progress-bar[data-tone="yellow"]::-moz-progress-bar {
+    background: var(--chart-yellow);
   }
 
   .range-input {
